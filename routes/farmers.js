@@ -8,7 +8,16 @@ var LocalStrategy = require('passport-local').Strategy;
 var Vege =require('../models/vegetable');
 var Farmer =require('../models/farmer');
 
-router.get('/', (req, res)=>{
+function ensureAuthenticated(req, res, next){
+  if(req.isAuthenticated()){
+    return next();
+  } else {
+    req.flash('error_msg','You are not logged in');
+    res.redirect('/farmers/loginFarmer');
+  }
+}
+
+router.get('/', ensureAuthenticated, (req, res)=>{
   res.render('farmer');
 });
 
@@ -65,7 +74,7 @@ router.post('/newFarmer', (req, res)=>{
       if(err) throw err;
       if(farmer){
         req.flash('error_msg', 'Some already joined using this mail address.');
-        res.redirect('/farmer/register');
+        res.redirect('/farmers/newFarmer');
       }
       else {
         var newFarmer = new Farmer();
@@ -88,7 +97,7 @@ router.post('/newFarmer', (req, res)=>{
 });
 
 router.get('/loginFarmer', (req, res)=>{
-  res.render('farmerLogin');
+  res.render('farmerlogin');
 });
 
 passport.use(new LocalStrategy(
@@ -111,9 +120,26 @@ passport.use(new LocalStrategy(
   }));
 
   router.post('/vallogfarmer',
-  passport.authenticate('local', {successRedirect: '/farmers/', failureRedirect: '/farmers/loginFarmer', failureFlash: true}),
+  passport.authenticate('local', {successRedirect: '/farmers', failureRedirect: '/farmers/loginFarmer', failureFlash: true}),
   (req, res)=>{
     res.redirect('/farmers/loginFarmer');
   });
+
+  router.get('/viewprices', (req, res)=>{
+    res.render('viewerpage');
+  })
+
+  passport.serializeUser((farmer, done)=>{
+    done(null, farmer.id);
+  });
+
+  passport.deserializeUser((id, done)=>{
+    Farmer.getFamerById(id, (err, farmer)=>{
+      done(err, farmer);
+    });
+  });
+
+
+
 
   module.exports = router;
